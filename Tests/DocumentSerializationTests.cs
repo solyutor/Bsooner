@@ -1,7 +1,6 @@
-﻿using System.Data.SqlTypes;
-using NUnit.Framework;
+﻿using NUnit.Framework;
 
-namespace Bsooner
+namespace Tests
 {
     [TestFixture]
     public class DocumentSerializationTests : SerializationTests

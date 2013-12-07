@@ -1,6 +1,6 @@
 ﻿using NUnit.Framework;
 
-namespace Bsooner
+namespace Tests
 {
     [TestFixture]
     public class ScratchPad

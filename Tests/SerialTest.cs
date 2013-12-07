@@ -1,4 +1,4 @@
-namespace Bsooner
+namespace Tests
 {
     public struct SerialTest
     {

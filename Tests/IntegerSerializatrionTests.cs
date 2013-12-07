@@ -1,7 +1,6 @@
-﻿using Newtonsoft.Json.Schema;
-using NUnit.Framework;
+﻿using NUnit.Framework;
 
-namespace Bsooner
+namespace Tests
 {
     [TestFixture]
     public class IntegerSerializatrionTests

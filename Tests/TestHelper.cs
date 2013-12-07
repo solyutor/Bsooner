@@ -1,10 +1,11 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using Bsooner;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 
-namespace Bsooner
+namespace Tests
 {
     public static class TestHelper
     {

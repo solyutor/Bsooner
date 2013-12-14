@@ -1,19 +1,22 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 
 namespace Bsooner
 {
     public class BsonSerializer<T>
     {
-        private static readonly Action<BinaryWriter, T> WriteBody;
+        private readonly CustomSerializer<T> _writeBody;
 
         static BsonSerializer()
         {
-            Instance = new BsonSerializer<T>();
-            WriteBody = Builder.BuildSerialiazer<T>();
+            Instance = new BsonSerializer<T>(Builder.BuildSerialiazer<T>());
         }
 
         public readonly static BsonSerializer<T> Instance;
+
+        public BsonSerializer(CustomSerializer<T> writeBody)
+        {
+            _writeBody = writeBody;
+        }
 
         public void Serialize(BinaryWriter writer, T instance)
         {
@@ -23,7 +26,7 @@ namespace Bsooner
             
             writer.Write(new int()); //placeholder;
 
-            WriteBody(writer, instance);
+            _writeBody(writer, instance);
 
             writer.Write(new byte()); //objectTerminator
 

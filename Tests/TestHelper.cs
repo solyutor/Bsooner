@@ -34,7 +34,7 @@ namespace Tests
             }
         }
 
-        private static string Dump(MemoryStream stream)
+        public static string Dump(MemoryStream stream)
         {
             var buffer = stream.GetBuffer();
             return string.Join("-", buffer.Take((int)stream.Position).Select(x => x.ToString("x2")));

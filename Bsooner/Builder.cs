@@ -50,6 +50,10 @@ namespace Bsooner
                 {
                     writeMethod = fastBson.GetMethod("WriteNullableStruct").MakeGenericMethod(memberType);
                 }
+                else if(memberType == typeof(byte).MakeArrayType())
+                {
+                    writeMethod = fastBson.GetMethod("WriteProperty", new[] { typeof(BinaryWriter), typeof(string), memberType });
+                }
                 else if (memberType.IsClass)
                 {
                     writeMethod = fastBson.GetMethod("WriteClass").MakeGenericMethod(memberType);

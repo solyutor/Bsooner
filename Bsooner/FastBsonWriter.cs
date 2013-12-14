@@ -44,6 +44,26 @@ namespace Bsooner
             return WriteNullProperty(writer, name);
         }
 
+        public static BinaryWriter WriteProperty(this BinaryWriter writer, string name, byte[] value)
+        {
+            if (value == null)
+            {
+                return WriteNullProperty(writer, name);
+            }
+
+            writer
+                .WriteType(BsonType.Binary)
+                .WritePropertyName(name);
+
+            writer.Write(value.Length);
+            writer.Write((byte) BinaryType.Generic);
+
+            writer.Write(value);
+
+            return writer;
+        }
+
+
         public static BinaryWriter WriteStruct<TDocument>(this BinaryWriter writer, string name, TDocument value)
             where TDocument : struct 
         {

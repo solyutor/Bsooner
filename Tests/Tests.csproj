@@ -35,6 +35,7 @@
     <StartupObject />
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="BinarySerializationTests.cs" />
     <Compile Include="DocumentSerializationTests.cs" />
     <Compile Include="DoubleSerializationTests.cs" />
     <Compile Include="IntegerSerializatrionTests.cs" />

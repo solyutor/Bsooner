@@ -12,7 +12,6 @@ namespace Bsooner
         UtcDateTime = 0x09, 
         Null = 0x0A,
         Int32 = 0x10,
-        Timestamp = 0x11,
         Int64 = 0x12
     }
 }

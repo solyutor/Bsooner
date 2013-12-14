@@ -3,7 +3,7 @@
 namespace Tests
 {
     [TestFixture]
-    public class IntegerSerializatrionTests
+    public class Int32SerializatrionTests
     {
         public struct HasInt
         {

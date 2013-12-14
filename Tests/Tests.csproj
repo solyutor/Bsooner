@@ -44,6 +44,7 @@
     <Compile Include="ScratchPad.cs" />
     <Compile Include="SerializationTests.cs" />
     <Compile Include="SerialTest.cs" />
+    <Compile Include="StringSerializationTests.cs" />
     <Compile Include="TestHelper.cs" />
   </ItemGroup>
   <ItemGroup>

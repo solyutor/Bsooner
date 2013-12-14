@@ -16,7 +16,7 @@ namespace Tests
             {
                 BsonSerializer<T>.Instance.Serialize(writer, value);
                 var result = Dump(stream);
-                Console.WriteLine("Actual: " + result);
+                Console.WriteLine("Actual  : " + result);
                 return result;
             }
         }

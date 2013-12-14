@@ -146,11 +146,19 @@ namespace Bsooner
                 return WriteNullProperty(writer, name);
             }
 
-            return writer
+            writer
                 .WriteType(BsonType.String)
-                .WritePropertyName(name)
-                .WriteValue(value);
+                .WritePropertyName(name);
 
+
+            var stringAsBytes = Encoding.UTF8.GetBytes(value);
+            
+
+            writer.Write(stringAsBytes.Length + 1); //size placeholder
+            writer.Write(stringAsBytes);
+            writer.Write(new byte()); // string terminator
+
+            return writer;
         }
 
         private static BinaryWriter WriteType(this BinaryWriter writer, BsonType bsonType)

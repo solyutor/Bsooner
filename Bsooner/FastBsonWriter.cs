@@ -8,6 +8,8 @@ namespace Bsooner
 {
     public static class FastBsonWriter
     {
+        public static readonly DateTime UnixEpoch = new DateTime(1970, 1,1, 0,0,0, DateTimeKind.Utc);
+
         public static BinaryWriter WriteProperty(this BinaryWriter writer, string name, int value)
         {
             writer
@@ -103,7 +105,6 @@ namespace Bsooner
             return writer;
         }
 
-
         public static BinaryWriter WriteStruct<TDocument>(this BinaryWriter writer, string name, TDocument value)
             where TDocument : struct
         {
@@ -158,6 +159,29 @@ namespace Bsooner
             writer.Write(new byte()); // string terminator
 
             return writer;
+        }
+
+        public static BinaryWriter WriteProperty(this BinaryWriter writer, string name, DateTime value)
+        {
+            var utcValue = value.ToUniversalTime();
+
+            var milliSeconds = (long)(utcValue - UnixEpoch).TotalMilliseconds;
+
+            writer
+                .WriteType(BsonType.UtcDateTime)
+                .WritePropertyName(name)
+                .Write(milliSeconds);
+            return writer;
+        }
+
+        public static BinaryWriter WriteProperty(this BinaryWriter writer, string name, DateTime? value)
+        {
+            if (value.HasValue)
+            {
+                return writer.WriteProperty(name, value.Value);
+            }
+
+            return WriteNullProperty(writer, name);
         }
 
         public static BinaryWriter WriteBsonId(this BinaryWriter writer, string name, string value)

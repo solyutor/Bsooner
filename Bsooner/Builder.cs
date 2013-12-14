@@ -46,12 +46,14 @@ namespace Bsooner
                 var fastBson = typeof(FastBsonWriter);
 
 
-
-
                 //note: order does matter
                 if (isBsonIdMember)
                 {
                     writeMethod = fastBson.GetMethod("WriteBsonId", new[] { typeof(BinaryWriter), typeof(string), memberType });
+                }
+                else if(memberType == typeof(DateTime) || memberType ==  typeof(DateTime?))
+                {
+                    writeMethod = fastBson.GetMethod("WriteProperty", new[] { typeof(BinaryWriter), typeof(string), memberType });
                 }
                 else if (isStruct)
                 {

@@ -37,6 +37,7 @@
   <ItemGroup>
     <Compile Include="BinarySerializationTests.cs" />
     <Compile Include="BooleanSerializationTests.cs" />
+    <Compile Include="CustomSerializationTests.cs" />
     <Compile Include="DateTimeSerializationTests.cs" />
     <Compile Include="DocumentSerializationTests.cs" />
     <Compile Include="DoubleSerializationTests.cs" />

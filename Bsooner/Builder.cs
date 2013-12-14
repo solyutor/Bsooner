@@ -36,15 +36,26 @@ namespace Bsooner
                     && !memberType.IsPrimitive
                     && !(isNullable && memberType.GetGenericArguments()[0].IsPrimitive);
 
+                var isBsonIdMember = 
+                    (memberType == typeof(string) && member.GetCustomAttributes(typeof (ObjectIdAttribute), true).Length > 0) 
+                    || memberType == typeof (ObjectId) 
+                    || memberType == typeof (ObjectId?);    
 
                 MethodInfo writeMethod;
 
                 var fastBson = typeof(FastBsonWriter);
 
-                if (isStruct)
+
+
+
+                //note: order does matter
+                if (isBsonIdMember)
+                {
+                    writeMethod = fastBson.GetMethod("WriteBsonId", new[] { typeof(BinaryWriter), typeof(string), memberType });
+                }
+                else if (isStruct)
                 {
                     writeMethod = fastBson.GetMethod("WriteStruct").MakeGenericMethod(memberType);
-
                 }
                 else if (isNullableStruct)
                 {

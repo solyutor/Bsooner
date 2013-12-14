@@ -44,7 +44,10 @@
     <Compile Include="BsonSerializer.cs" />
     <Compile Include="BsonType.cs" />
     <Compile Include="Builder.cs" />
+    <Compile Include="ConvertionExtensions.cs" />
     <Compile Include="FastBsonWriter.cs" />
+    <Compile Include="ObjectId.cs" />
+    <Compile Include="ObjectIdAttribute.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

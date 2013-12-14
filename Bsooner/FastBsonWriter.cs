@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using System.Net;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Bsooner
@@ -94,7 +96,7 @@ namespace Bsooner
                 .WritePropertyName(name);
 
             writer.Write(value.Length);
-            writer.Write((byte) BinaryType.Generic);
+            writer.Write((byte)BinaryType.Generic);
 
             writer.Write(value);
 
@@ -103,7 +105,7 @@ namespace Bsooner
 
 
         public static BinaryWriter WriteStruct<TDocument>(this BinaryWriter writer, string name, TDocument value)
-            where TDocument : struct 
+            where TDocument : struct
         {
             writer.WriteType(BsonType.Document);
             writer.WritePropertyName(name);
@@ -114,7 +116,7 @@ namespace Bsooner
         }
 
         public static BinaryWriter WriteNullableStruct<TDocument>(this BinaryWriter writer, string name, TDocument? value)
-            where TDocument : struct 
+            where TDocument : struct
         {
             if (value.HasValue)
             {
@@ -125,7 +127,7 @@ namespace Bsooner
         }
 
         public static BinaryWriter WriteClass<TDocument>(this BinaryWriter writer, string name, TDocument value)
-            where TDocument : class 
+            where TDocument : class
         {
             if (value != null)
             {
@@ -146,17 +148,88 @@ namespace Bsooner
                 return WriteNullProperty(writer, name);
             }
 
+            var stringAsBytes = Encoding.UTF8.GetBytes(value);
+
             writer
                 .WriteType(BsonType.String)
-                .WritePropertyName(name);
-
-
-            var stringAsBytes = Encoding.UTF8.GetBytes(value);
-            
-
-            writer.Write(stringAsBytes.Length + 1); //size placeholder
+                .WritePropertyName(name)
+                .Write(stringAsBytes.Length + 1); //size placeholder
             writer.Write(stringAsBytes);
             writer.Write(new byte()); // string terminator
+
+            return writer;
+        }
+
+        public static BinaryWriter WriteBsonId(this BinaryWriter writer, string name, string value)
+        {
+            writer
+                .WriteType(BsonType.ObjectId)
+                .WritePropertyName(name);
+            //empty id
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                writer.Write(new byte());
+                writer.Write(new byte());
+                writer.Write(new byte());
+                writer.Write(new byte());
+                writer.Write(new byte());
+                writer.Write(new byte());
+                writer.Write(new byte());
+                writer.Write(new byte());
+                writer.Write(new byte());
+                writer.Write(new byte());
+                writer.Write(new byte());
+                writer.Write(new byte());
+            }
+            else
+            {
+                value.EnsureValidObjectIdString();
+
+                writer.Write(value.ToByteFromHex(0));
+                writer.Write(value.ToByteFromHex(2));
+                writer.Write(value.ToByteFromHex(4));
+                writer.Write(value.ToByteFromHex(6));
+                writer.Write(value.ToByteFromHex(8));
+                writer.Write(value.ToByteFromHex(10));
+                writer.Write(value.ToByteFromHex(12));
+                writer.Write(value.ToByteFromHex(14));
+                writer.Write(value.ToByteFromHex(16));
+                writer.Write(value.ToByteFromHex(18));
+                writer.Write(value.ToByteFromHex(20));
+                writer.Write(value.ToByteFromHex(22));
+            }
+
+            return writer;
+        }
+
+        public static BinaryWriter WriteBsonId(this BinaryWriter writer, string name, ObjectId? value)
+        {
+            if (value.HasValue)
+            {
+                return writer.WriteBsonId(name, value.Value);
+            }
+
+            return writer.WriteNullProperty(name);
+        }
+
+        public static BinaryWriter WriteBsonId(this BinaryWriter writer, string name, ObjectId value)
+        {
+            writer
+                .WriteType(BsonType.ObjectId)
+                .WritePropertyName(name);
+
+            writer.Write(value.Byte01);
+            writer.Write(value.Byte02);
+            writer.Write(value.Byte03);
+            writer.Write(value.Byte04);
+            writer.Write(value.Byte05);
+            writer.Write(value.Byte06);
+            writer.Write(value.Byte07);
+            writer.Write(value.Byte08);
+            writer.Write(value.Byte09);
+            writer.Write(value.Byte10);
+            writer.Write(value.Byte11);
+            writer.Write(value.Byte12);
 
             return writer;
         }

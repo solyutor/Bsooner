@@ -39,6 +39,7 @@
     <Compile Include="BooleanSerializationTests.cs" />
     <Compile Include="DocumentSerializationTests.cs" />
     <Compile Include="DoubleSerializationTests.cs" />
+    <Compile Include="Int64SerializationTests.cs" />
     <Compile Include="IntegerSerializatrionTests.cs" />
     <Compile Include="ScratchPad.cs" />
     <Compile Include="SerializationTests.cs" />

@@ -63,6 +63,25 @@ namespace Bsooner
             return WriteNullProperty(writer, name);
         }
 
+        public static BinaryWriter WriteProperty(this BinaryWriter writer, string name, long value)
+        {
+            writer
+                .WriteType(BsonType.Int64)
+                .WritePropertyName(name)
+                .Write(value);
+            return writer;
+        }
+
+        public static BinaryWriter WriteProperty(this BinaryWriter writer, string name, long? value)
+        {
+            if (value.HasValue)
+            {
+                return writer.WriteProperty(name, value.Value);
+            }
+
+            return WriteNullProperty(writer, name);
+        }
+
         public static BinaryWriter WriteProperty(this BinaryWriter writer, string name, byte[] value)
         {
             if (value == null)

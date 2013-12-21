@@ -29,68 +29,49 @@ namespace Bsooner
                 CustomSerializer<T> serializer;
                 if (serializers.TryGetValue(member, out serializer))
                 {
-                    var customExpression =  Expression.Constant(serializer);
+                    var customExpression = Expression.Constant(serializer);
                     var call = Expression.Call(customExpression, "Invoke", Type.EmptyTypes, writerParameter, instanceParameter);
                     writeExpressions.Add(call);
                     continue;
                 }
-                
+
                 var propertyName = Expression.Constant(member.Name);
 
                 var value = Expression.PropertyOrField(instanceParameter, member.Name);
 
-                var memberType = GetPropertyOrFieldType(member);
+                var memberType = member.GetPropertyOrFieldType();
 
-                var isNullable = memberType.IsGenericType && memberType.GetGenericTypeDefinition() == typeof(Nullable<>);
-
-                var isNullableStruct = isNullable && !memberType.GetGenericArguments()[0].IsPrimitive;
-
-                var isStruct = memberType.IsValueType 
-                    && !memberType.IsPrimitive
-                    && !(isNullable && memberType.GetGenericArguments()[0].IsPrimitive);
-
-                var isBsonIdMember = 
-                    (memberType == typeof(string) && member.GetCustomAttributes(typeof (ObjectIdAttribute), true).Length > 0) 
-                    || memberType == typeof (ObjectId) 
-                    || memberType == typeof (ObjectId?);    
+                var writeType = member.GetWriteMethod();
 
                 MethodInfo writeMethod;
 
                 var fastBson = typeof(FastBsonWriter);
 
-
-                //note: order does matter
-                if (isBsonIdMember)
+                switch (writeType)
                 {
-                    writeMethod = fastBson.GetMethod("WriteBsonId", new[] { typeof(BinaryWriter), typeof(string), memberType });
-                }
-                else if(memberType == typeof(DateTime) || memberType ==  typeof(DateTime?))
-                {
-                    writeMethod = fastBson.GetMethod("WriteProperty", new[] { typeof(BinaryWriter), typeof(string), memberType });
-                }
-                else if (isStruct)
-                {
-                    writeMethod = fastBson.GetMethod("WriteStruct").MakeGenericMethod(memberType);
-                }
-                else if (isNullableStruct)
-                {
-                    writeMethod = fastBson.GetMethod("WriteNullableStruct").MakeGenericMethod(memberType);
-                }
-                else if (memberType == typeof(string))
-                {
-                    writeMethod = fastBson.GetMethod("WriteProperty", new[] { typeof(BinaryWriter), typeof(string), memberType });
-                }
-                else if(memberType == typeof(byte).MakeArrayType())
-                {
-                    writeMethod = fastBson.GetMethod("WriteProperty", new[] { typeof(BinaryWriter), typeof(string), memberType });
-                }
-                else if (memberType.IsClass)
-                {
-                    writeMethod = fastBson.GetMethod("WriteClass").MakeGenericMethod(memberType);
-                }
-                else
-                {
-                    writeMethod = fastBson.GetMethod("WriteProperty", new[] { typeof(BinaryWriter), typeof(string), memberType });
+                    
+                    case WriteMethod.Binary:
+                        writeMethod = fastBson.GetMethod("WriteBinary", new[] { typeof(BinaryWriter), typeof(string), memberType });
+                        break;
+                    case WriteMethod.Class:
+                        writeMethod = fastBson.GetMethod("WriteClass").MakeGenericMethod(memberType);
+                        break;
+                    case WriteMethod.NullableStruct:
+                        writeMethod = fastBson.GetMethod("WriteNullableStruct").MakeGenericMethod(memberType);
+                        break;
+                    case WriteMethod.ObjectId:
+                        writeMethod = fastBson.GetMethod("WriteBsonId", new[] { typeof(BinaryWriter), typeof(string), memberType });
+                        break;
+                    case WriteMethod.SimpleType:
+                        writeMethod = fastBson.GetMethod("WriteProperty", new[] { typeof(BinaryWriter), typeof(string), memberType });
+                        break;
+                    case WriteMethod.Struct:
+                        writeMethod = fastBson.GetMethod("WriteStruct").MakeGenericMethod(memberType);
+                        break;
+                    case WriteMethod.Array:
+                        throw new NotSupportedException();
+                    default:
+                        throw new NotImplementedException();
                 }
 
                 var writerExpression = Expression.Call(writeMethod, writerParameter, propertyName, value);
@@ -104,31 +85,6 @@ namespace Bsooner
             var result = Expression.Lambda<CustomSerializer<T>>(body, writerParameter, instanceParameter);
             return result.Compile();
 
-        }
-
-        private static BsonType GetBsonType(MemberInfo member)
-        {
-            var type = GetPropertyOrFieldType(member);
-
-            if (type == typeof(int) || type == typeof(int?))
-            {
-                return BsonType.Int32;
-            }
-
-            return BsonType.Document;
-        }
-
-        private static Type GetPropertyOrFieldType(MemberInfo member)
-        {
-            var property = member as PropertyInfo;
-            if (property != null)
-            {
-                return property.PropertyType;
-            }
-
-            var field = (FieldInfo)member;
-
-            return field.FieldType;
         }
     }
 }

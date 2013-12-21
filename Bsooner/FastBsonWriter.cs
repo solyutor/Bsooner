@@ -86,7 +86,7 @@ namespace Bsooner
             return WriteNullProperty(writer, name);
         }
 
-        public static BinaryWriter WriteProperty(this BinaryWriter writer, string name, byte[] value)
+        public static BinaryWriter WriteBinary(this BinaryWriter writer, string name, byte[] value)
         {
             if (value == null)
             {

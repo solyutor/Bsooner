@@ -33,7 +33,7 @@ namespace Tests
             var serializer = new BsonSerializer<StringAsBoolean>(bodySerializer);
 
             using (var stream = new MemoryStream())
-            using (var writer = new BinaryWriter(stream))
+            using (var writer = new FastBsonWriter(stream))
             {
                 serializer.Serialize(writer, probe);
                 var actual = TestHelper.Dump(stream);
@@ -44,7 +44,7 @@ namespace Tests
             }
         }
 
-        public static void CustomSerializer(BinaryWriter writer, StringAsBoolean instance)
+        public static void CustomSerializer(FastBsonWriter writer, StringAsBoolean instance)
         {
             if ("True".Equals(instance.IsGod, StringComparison.OrdinalIgnoreCase))
             {

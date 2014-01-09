@@ -1,299 +1,376 @@
 using System;
 using System.IO;
-using System.Net;
-using System.Runtime.InteropServices;
-using System.Text;
 
 namespace Bsooner
 {
-    public static class FastBsonWriter
+    public class FastBsonWriter : IDisposable
     {
-        public static readonly DateTime UnixEpoch = new DateTime(1970, 1,1, 0,0,0, DateTimeKind.Utc);
+        private Stream _stream;
+        private byte[] _buffer;
+        private readonly int _maxCharsInBuffer;
 
-        public static BinaryWriter WriteProperty(this BinaryWriter writer, string name, int value)
+        public const int DefaultBufferSize = 64;
+
+        public FastBsonWriter(Stream stream, int bufferSize = DefaultBufferSize)
         {
-            writer
-                .WriteType(BsonType.Int32)
-                .WritePropertyName(name)
-                .Write(value);
-            return writer;
+            if (!stream.CanSeek)
+            {
+                throw new NotSupportedException("Non seek-able streams are not supported");
+            }
+            _stream = stream;
+            _buffer = new byte[bufferSize];
+            _maxCharsInBuffer = _buffer.Length / BsonDefaults.MaxCharLength;
         }
 
-        public static BinaryWriter WriteProperty(this BinaryWriter writer, string name, int? value)
+        public Stream BaseStream
+        {
+            get { return _stream; }
+        }
+
+        public FastBsonWriter WriteProperty(string name, int value)
+        {
+            WriteType(BsonType.Int32).
+            WritePropertyName(name);
+
+            _buffer[0] = (byte)value;
+            _buffer[1] = (byte)(value >> 8);
+            _buffer[2] = (byte)(value >> 16);
+            _buffer[3] = (byte)(value >> 24);
+
+            _stream.Write(_buffer, 0, 4);
+            return this;
+        }
+
+        public FastBsonWriter WriteProperty(string name, int? value)
         {
             if (value.HasValue)
             {
-                return writer.WriteProperty(name, value.Value);
+                return WriteProperty(name, value.Value);
             }
 
-            return WriteNullProperty(writer, name);
+            return WriteNullProperty(name);
         }
 
-        public static BinaryWriter WriteProperty(this BinaryWriter writer, string name, double value)
+        public unsafe FastBsonWriter WriteProperty(string name, double value)
         {
-            writer
-                .WriteType(BsonType.Double)
-                .WritePropertyName(name)
-                .Write(value);
-            return writer;
+            WriteType(BsonType.Double);
+            WritePropertyName(name);
+
+            ulong doubleAsULong = *(ulong*)&value;
+
+            _buffer[0] = (byte)doubleAsULong;
+            _buffer[1] = (byte)(doubleAsULong >> 8);
+            _buffer[2] = (byte)(doubleAsULong >> 16);
+            _buffer[3] = (byte)(doubleAsULong >> 24);
+            _buffer[4] = (byte)(doubleAsULong >> 32);
+            _buffer[5] = (byte)(doubleAsULong >> 40);
+            _buffer[6] = (byte)(doubleAsULong >> 48);
+            _buffer[7] = (byte)(doubleAsULong >> 56);
+
+            _stream.Write(_buffer, 0, 8);
+
+            return this;
         }
 
-        public static BinaryWriter WriteProperty(this BinaryWriter writer, string name, double? value)
+        public FastBsonWriter WriteProperty(string name, double? value)
         {
             if (value.HasValue)
             {
-                return writer.WriteProperty(name, value.Value);
+                return WriteProperty(name, value.Value);
             }
 
-            return WriteNullProperty(writer, name);
+            return WriteNullProperty(name);
         }
 
-        public static BinaryWriter WriteProperty(this BinaryWriter writer, string name, bool value)
+        public FastBsonWriter WriteProperty(string name, bool value)
         {
-            writer
-                .WriteType(BsonType.Boolean)
-                .WritePropertyName(name)
-                .Write(value);
-            return writer;
+            WriteType(BsonType.Boolean);
+            WritePropertyName(name);
+
+            _stream.WriteByte((byte)(value ? 1 : 0));
+            return this;
         }
 
-        public static BinaryWriter WriteProperty(this BinaryWriter writer, string name, bool? value)
+        public FastBsonWriter WriteProperty(string name, bool? value)
         {
             if (value.HasValue)
             {
-                return writer.WriteProperty(name, value.Value);
+                return WriteProperty(name, value.Value);
             }
 
-            return WriteNullProperty(writer, name);
+            return WriteNullProperty(name);
         }
 
-        public static BinaryWriter WriteProperty(this BinaryWriter writer, string name, long value)
+        public FastBsonWriter WriteProperty(string name, long value)
         {
-            writer
-                .WriteType(BsonType.Int64)
-                .WritePropertyName(name)
-                .Write(value);
-            return writer;
+            WriteType(BsonType.Int64).
+                WritePropertyName(name);
+
+            WriteLong(value);
+
+            return this;
         }
 
-        public static BinaryWriter WriteProperty(this BinaryWriter writer, string name, long? value)
+        public FastBsonWriter WriteProperty(string name, long? value)
         {
             if (value.HasValue)
             {
-                return writer.WriteProperty(name, value.Value);
+                return WriteProperty(name, value.Value);
             }
 
-            return WriteNullProperty(writer, name);
+            return WriteNullProperty(name);
         }
 
-        public static BinaryWriter WriteBinary(this BinaryWriter writer, string name, byte[] value)
+        public FastBsonWriter WriteBinary(string name, byte[] value)
         {
             if (value == null)
             {
-                return WriteNullProperty(writer, name);
+                return WriteNullProperty(name);
             }
 
-            writer
-                .WriteType(BsonType.Binary)
-                .WritePropertyName(name);
+            WriteType(BsonType.Binary);
+            WritePropertyName(name);
 
-            writer.Write(value.Length);
-            writer.Write((byte)BinaryType.Generic);
+            WriteInt(value.Length);
 
-            writer.Write(value);
+            _stream.WriteByte((byte)BinaryType.Generic);
+            _stream.Write(value, 0, value.Length);
 
-            return writer;
+            return this;
         }
 
-        public static BinaryWriter WriteStruct<TDocument>(this BinaryWriter writer, string name, TDocument value)
+        public FastBsonWriter WriteStruct<TDocument>(string name, TDocument value)
             where TDocument : struct
         {
-            writer.WriteType(BsonType.Document);
-            writer.WritePropertyName(name);
+            WriteType(BsonType.Document);
+            WritePropertyName(name);
 
-            BsonSerializer<TDocument>.Instance.Serialize(writer, value);
+            BsonSerializer<TDocument>.Instance.Serialize(this, value);
 
-            return writer;
+            return this;
         }
 
-        public static BinaryWriter WriteNullableStruct<TDocument>(this BinaryWriter writer, string name, TDocument? value)
+        public FastBsonWriter WriteNullableStruct<TDocument>(string name, TDocument? value)
             where TDocument : struct
         {
             if (value.HasValue)
             {
-                return writer.WriteStruct(name, value.Value);
+                return WriteStruct(name, value.Value);
             }
 
-            return writer.WriteNullProperty(name);
+            return WriteNullProperty(name);
         }
 
-        public static BinaryWriter WriteClass<TDocument>(this BinaryWriter writer, string name, TDocument value)
+        public FastBsonWriter WriteClass<TDocument>(string name, TDocument value)
             where TDocument : class
         {
             if (value != null)
             {
-                writer.WriteType(BsonType.Document);
-                writer.WritePropertyName(name);
+                WriteType(BsonType.Document);
+                WritePropertyName(name);
 
-                BsonSerializer<TDocument>.Instance.Serialize(writer, value);
-                return writer;
+                BsonSerializer<TDocument>.Instance.Serialize(this, value);
+                return this;
             }
 
-            return writer.WriteNullProperty(name);
+            return WriteNullProperty(name);
         }
 
-        public static BinaryWriter WriteProperty(this BinaryWriter writer, string name, string value)
+        public FastBsonWriter WriteProperty(string name, string value)
         {
             if (value == null)
             {
-                return WriteNullProperty(writer, name);
+                return WriteNullProperty(name);
             }
 
-            var stringAsBytes = Encoding.UTF8.GetBytes(value);
+            WriteType(BsonType.String);
+            WritePropertyName(name);
 
-            writer
-                .WriteType(BsonType.String)
-                .WritePropertyName(name)
-                .Write(stringAsBytes.Length + 1); //size placeholder
-            writer.Write(stringAsBytes);
-            writer.Write(new byte()); // string terminator
+            //placeholder
 
-            return writer;
+            WriteInt(0);
+
+
+            var startPosition = _stream.Position;
+
+            WriteString(value);
+            _stream.WriteByte(0); //string terminator
+            var endPosition = _stream.Position;
+
+            var length = endPosition - startPosition; //plus terminator
+
+            _stream.Position = startPosition - 4;
+            WriteInt((int)length);
+
+            _stream.Position = endPosition;
+            return this;
         }
 
-        public static BinaryWriter WriteProperty(this BinaryWriter writer, string name, DateTime value)
+        public FastBsonWriter WriteProperty(string name, DateTime value)
         {
             var utcValue = value.ToUniversalTime();
 
-            var milliSeconds = (long)(utcValue - UnixEpoch).TotalMilliseconds;
+            long milliSeconds = (long)(utcValue - BsonDefaults.UnixEpoch).TotalMilliseconds;
 
-            writer
-                .WriteType(BsonType.UtcDateTime)
-                .WritePropertyName(name)
-                .Write(milliSeconds);
-            return writer;
+            WriteType(BsonType.UtcDateTime);
+            WritePropertyName(name)
+            .WriteLong(milliSeconds);
+
+            return this;
         }
 
-        public static BinaryWriter WriteProperty(this BinaryWriter writer, string name, DateTime? value)
+        public FastBsonWriter WriteProperty(string name, DateTime? value)
         {
             if (value.HasValue)
             {
-                return writer.WriteProperty(name, value.Value);
+                return WriteProperty(name, value.Value);
             }
 
-            return WriteNullProperty(writer, name);
+            return WriteNullProperty(name);
         }
 
-        public static BinaryWriter WriteBsonId(this BinaryWriter writer, string name, string value)
+        public FastBsonWriter WriteBsonId(string name, string value)
         {
-            writer
-                .WriteType(BsonType.ObjectId)
-                .WritePropertyName(name);
+            WriteType(BsonType.ObjectId);
+            WritePropertyName(name);
+
             //empty id
             if (string.IsNullOrWhiteSpace(value))
             {
-                writer.Write(new byte());
-                writer.Write(new byte());
-                writer.Write(new byte());
-                writer.Write(new byte());
-                writer.Write(new byte());
-                writer.Write(new byte());
-                writer.Write(new byte());
-                writer.Write(new byte());
-                writer.Write(new byte());
-                writer.Write(new byte());
-                writer.Write(new byte());
-                writer.Write(new byte());
+                Array.Clear(_buffer, 0, 12);
             }
             else
             {
                 value.EnsureValidObjectIdString();
 
-                writer.Write(value.ToByteFromHex(0));
-                writer.Write(value.ToByteFromHex(2));
-                writer.Write(value.ToByteFromHex(4));
-                writer.Write(value.ToByteFromHex(6));
-                writer.Write(value.ToByteFromHex(8));
-                writer.Write(value.ToByteFromHex(10));
-                writer.Write(value.ToByteFromHex(12));
-                writer.Write(value.ToByteFromHex(14));
-                writer.Write(value.ToByteFromHex(16));
-                writer.Write(value.ToByteFromHex(18));
-                writer.Write(value.ToByteFromHex(20));
-                writer.Write(value.ToByteFromHex(22));
+                _buffer[0] = value.ToByteFromHex(0);
+                _buffer[1] = value.ToByteFromHex(2);
+                _buffer[2] = value.ToByteFromHex(4);
+                _buffer[3] = value.ToByteFromHex(6);
+                _buffer[4] = value.ToByteFromHex(8);
+                _buffer[5] = value.ToByteFromHex(10);
+                _buffer[6] = value.ToByteFromHex(12);
+                _buffer[7] = value.ToByteFromHex(14);
+                _buffer[8] = value.ToByteFromHex(16);
+                _buffer[9] = value.ToByteFromHex(18);
+                _buffer[10] = value.ToByteFromHex(20);
+                _buffer[11] = value.ToByteFromHex(22);
             }
 
-            return writer;
+            _stream.Write(_buffer, 0, 12);
+            return this;
         }
 
-        public static BinaryWriter WriteBsonId(this BinaryWriter writer, string name, ObjectId? value)
+        public FastBsonWriter WriteBsonId(string name, ObjectId? value)
         {
             if (value.HasValue)
             {
-                return writer.WriteBsonId(name, value.Value);
+                return WriteBsonId(name, value.Value);
             }
 
-            return writer.WriteNullProperty(name);
+            return WriteNullProperty(name);
         }
 
-        public static BinaryWriter WriteBsonId(this BinaryWriter writer, string name, ObjectId value)
+        public FastBsonWriter WriteBsonId(string name, ObjectId value)
         {
-            writer
-                .WriteType(BsonType.ObjectId)
-                .WritePropertyName(name);
+            WriteType(BsonType.ObjectId);
+            WritePropertyName(name);
 
-            writer.Write(value.Byte01);
-            writer.Write(value.Byte02);
-            writer.Write(value.Byte03);
-            writer.Write(value.Byte04);
-            writer.Write(value.Byte05);
-            writer.Write(value.Byte06);
-            writer.Write(value.Byte07);
-            writer.Write(value.Byte08);
-            writer.Write(value.Byte09);
-            writer.Write(value.Byte10);
-            writer.Write(value.Byte11);
-            writer.Write(value.Byte12);
+            _buffer[0] = value.Byte01;
+            _buffer[1] = value.Byte02;
+            _buffer[2] = value.Byte03;
+            _buffer[3] = value.Byte04;
+            _buffer[4] = value.Byte05;
+            _buffer[5] = value.Byte06;
+            _buffer[6] = value.Byte07;
+            _buffer[7] = value.Byte08;
+            _buffer[8] = value.Byte09;
+            _buffer[9] = value.Byte10;
+            _buffer[10] = value.Byte11;
+            _buffer[11] = value.Byte12;
 
-            return writer;
+            _stream.Write(_buffer, 0, 12);
+
+            return this;
         }
 
-        private static BinaryWriter WriteType(this BinaryWriter writer, BsonType bsonType)
+        private FastBsonWriter WriteType(BsonType bsonType)
         {
-            writer.Write((byte)bsonType);
-            return writer;
+            _stream.WriteByte((byte) bsonType);
+            return this;
         }
 
-        private static BinaryWriter WritePropertyName(this BinaryWriter writer, string name)
+        private FastBsonWriter WritePropertyName(string name)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
                 throw new ArgumentException("property name could not be null", "name");
             }
 
-            var stringAsBytes = Encoding.UTF8.GetBytes(name);
-
-            writer.Write(stringAsBytes);
-            writer.Write(new byte()); // string terminator
-            return writer;
+            WriteString(name);
+            _stream.WriteByte(0);// string terminator
+            
+            return this;
         }
 
-        private static BinaryWriter WriteValue(this BinaryWriter writer, string value)
+        private FastBsonWriter WriteNullProperty(string name)
         {
-            if (value == null)
+            WriteType(BsonType.Null);
+            WritePropertyName(name);
+
+            return this;
+        }
+
+        internal void WriteInt(int value)
+        {
+            _buffer[0] = (byte)value;
+            _buffer[1] = (byte)(value >> 8);
+            _buffer[2] = (byte)(value >> 16);
+            _buffer[3] = (byte)(value >> 24);
+            _stream.Write(_buffer, 0, 4);
+        }
+
+        private unsafe void WriteString(string value)
+        {
+            int charStart = 0;
+            int numLeft = value.Length;
+
+            while (numLeft > 0)
             {
-                throw new ArgumentException("Null values should be written as BsonType.Null");
-            }
+                int charsToProceed = (numLeft > _maxCharsInBuffer) ? _maxCharsInBuffer : numLeft;
+                int byteLen;
+                fixed (char* pChars = value)
+                {
+                    fixed (byte* pBytes = _buffer)
+                    {
+                        byteLen = BsonDefaults.Encoder.GetBytes(pChars + charStart, charsToProceed, pBytes, _buffer.Length, charsToProceed == numLeft);
+                    }
+                }
 
-            writer.Write(value);
-            return writer;
+                _stream.Write(_buffer, 0, byteLen);
+                charStart += charsToProceed;
+                numLeft -= charsToProceed;
+            }
         }
 
-        private static BinaryWriter WriteNullProperty(this BinaryWriter writer, string name)
+        private void WriteLong(long value)
         {
-            return writer
-                .WriteType(BsonType.Null)
-                .WritePropertyName(name);
+            _buffer[0] = (byte)value;
+            _buffer[1] = (byte)(value >> 8);
+            _buffer[2] = (byte)(value >> 16);
+            _buffer[3] = (byte)(value >> 24);
+            _buffer[4] = (byte)(value >> 32);
+            _buffer[5] = (byte)(value >> 40);
+            _buffer[6] = (byte)(value >> 48);
+            _buffer[7] = (byte)(value >> 56);
+
+            _stream.Write(_buffer, 0, 8);
+        }
+
+        public void Dispose()
+        {
+            _stream = null;
+            _buffer = null;
         }
     }
 }

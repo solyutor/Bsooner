@@ -7,7 +7,7 @@ using System.Reflection;
 
 namespace Bsooner
 {
-    public delegate void CustomSerializer<T>(BinaryWriter writer, T instance);
+    public delegate void CustomSerializer<T>(FastBsonWriter writer, T instance);
 
     public class Builder
     {
@@ -19,7 +19,10 @@ namespace Bsooner
                 .GetMembers(BindingFlags.Instance | BindingFlags.Public | BindingFlags.GetProperty | BindingFlags.GetField | BindingFlags.GetProperty)
                 .Where(x => x.MemberType == MemberTypes.Field || x.MemberType == MemberTypes.Property);
 
-            var writerParameter = Expression.Parameter(typeof(BinaryWriter));
+            var fastBson = typeof(FastBsonWriter);
+
+            var writerParameter = Expression.Parameter(fastBson);
+
             var instanceParameter = Expression.Parameter(typeof(T));
 
             var writeExpressions = new List<Expression>();
@@ -45,13 +48,11 @@ namespace Bsooner
 
                 MethodInfo writeMethod;
 
-                var fastBson = typeof(FastBsonWriter);
-
                 switch (writeType)
                 {
                     
                     case WriteMethod.Binary:
-                        writeMethod = fastBson.GetMethod("WriteBinary", new[] { typeof(BinaryWriter), typeof(string), memberType });
+                        writeMethod = fastBson.GetMethod("WriteBinary", new[] { typeof(string), memberType });
                         break;
                     case WriteMethod.Class:
                         writeMethod = fastBson.GetMethod("WriteClass").MakeGenericMethod(memberType);
@@ -60,10 +61,10 @@ namespace Bsooner
                         writeMethod = fastBson.GetMethod("WriteNullableStruct").MakeGenericMethod(memberType);
                         break;
                     case WriteMethod.ObjectId:
-                        writeMethod = fastBson.GetMethod("WriteBsonId", new[] { typeof(BinaryWriter), typeof(string), memberType });
+                        writeMethod = fastBson.GetMethod("WriteBsonId", new[] {typeof(string), memberType });
                         break;
                     case WriteMethod.SimpleType:
-                        writeMethod = fastBson.GetMethod("WriteProperty", new[] { typeof(BinaryWriter), typeof(string), memberType });
+                        writeMethod = fastBson.GetMethod("WriteProperty", new[] {typeof(string), memberType });
                         break;
                     case WriteMethod.Struct:
                         writeMethod = fastBson.GetMethod("WriteStruct").MakeGenericMethod(memberType);
@@ -74,7 +75,7 @@ namespace Bsooner
                         throw new NotImplementedException();
                 }
 
-                var writerExpression = Expression.Call(writeMethod, writerParameter, propertyName, value);
+                var writerExpression = Expression.Call(writerParameter, writeMethod, propertyName, value);
                 writeExpressions.Add(writerExpression);
 
             }

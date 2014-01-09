@@ -12,7 +12,7 @@ namespace Tests
         public static string SerializeFast<T>(this T value)
         {
             using (var stream = new MemoryStream())
-            using (var writer = new BinaryWriter(stream))
+            using (var writer = new FastBsonWriter(stream))
             {
                 BsonSerializer<T>.Instance.Serialize(writer, value);
                 var result = Dump(stream);

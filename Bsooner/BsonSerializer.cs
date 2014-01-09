@@ -1,6 +1,4 @@
-﻿using System.IO;
-
-namespace Bsooner
+﻿namespace Bsooner
 {
     public class BsonSerializer<T>
     {
@@ -18,17 +16,17 @@ namespace Bsooner
             _writeBody = writeBody;
         }
 
-        public void Serialize(BinaryWriter writer, T instance)
+        public void Serialize(FastBsonWriter writer, T instance)
         {
             var stream = writer.BaseStream;
 
             var startPosition = stream.Position;
             
-            writer.Write(new int()); //placeholder;
+            writer.WriteInt(0);//placeholder;
 
             _writeBody(writer, instance);
 
-            writer.Write(new byte()); //objectTerminator
+           writer.BaseStream.WriteByte(0); //objectTerminator
 
             var length = stream.Position - startPosition;
 
@@ -36,7 +34,7 @@ namespace Bsooner
 
             stream.Position = startPosition;
 
-            writer.Write((int)length);
+            writer.WriteInt((int)length);
 
             stream.Position = endPosition;
         }

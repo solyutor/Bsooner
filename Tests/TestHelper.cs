@@ -21,6 +21,21 @@ namespace Tests
             }
         }
 
+        public static MemoryStream Serialize<T>(this T value)
+        {
+            var serialser = new JsonSerializer();
+            var stream = new MemoryStream();
+            var writer = new BsonWriter(stream);
+
+            serialser.Serialize(writer, value);
+            writer.Flush();
+
+            var result = Dump(stream);
+            Console.WriteLine("Expected: " + result);
+            stream.Position = 0;
+            return stream;
+        }
+
         public static string SerializeJsonNet<T>(this T value)
         {
             var serialser = new JsonSerializer();

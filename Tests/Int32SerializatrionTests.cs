@@ -18,7 +18,7 @@ namespace Tests
         [Test]
         public void Serialize_not_nullable_int()
         {
-            AssertSerializedEqually(new HasInt {Id = 42});
+            AssertSerializedEqually(new HasInt {Id = 0x10111213});
         }
 
         [Test]

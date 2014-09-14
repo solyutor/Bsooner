@@ -11,6 +11,7 @@ namespace Bsooner.Reading
         private BsonType _bsonType;
         private string _propertyName;
         private List<byte> _stringBytes;
+        private byte[] _buffer;
 
         public FastBsonReader(Stream stream)
         {
@@ -20,6 +21,7 @@ namespace Bsooner.Reading
             _bsonType = BsonType.None;
             _propertyName = null;
             _stringBytes = new List<byte>(128);
+            _buffer = new byte[8];
         }
 
         public BsonToken Token
@@ -93,6 +95,38 @@ namespace Bsooner.Reading
             _stringBytes.Clear();
             _token = BsonToken.PropertyName;
             return true;
+        }
+
+        public int ReadInt()
+        {
+            var first = _stream.ReadByte();
+            var second = _stream.ReadByte();
+            var third = _stream.ReadByte();
+            var forth = _stream.ReadByte();
+            var result = forth << 24 | third << 16 | second << 8 | first ;
+            return result;
+        }
+
+        public unsafe double ReadDouble()
+        {
+            _stream.Read(_buffer, 0, 8);
+            fixed (byte* bufferPointer = _buffer)
+            {
+                return *(double*) bufferPointer;
+            }
+/*
+ Alternative way. Check performance later
+            var buffer = stackalloc byte[8];
+            buffer[0] = _buffer[0];
+            buffer[1] = _buffer[1];
+            buffer[2] = _buffer[2];
+            buffer[3] = _buffer[3];
+            buffer[4] = _buffer[4];
+            buffer[5] = _buffer[5];
+            buffer[6] = _buffer[6];
+            buffer[7] = _buffer[7];
+            return *(double*) buffer;
+  */
         }
     }
 }

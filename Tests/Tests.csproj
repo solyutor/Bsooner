@@ -41,9 +41,14 @@
     <Compile Include="DateTimeSerializationTests.cs" />
     <Compile Include="DocumentSerializationTests.cs" />
     <Compile Include="DoubleSerializationTests.cs" />
+    <Compile Include="Reading\IntDeserializationTests.cs" />
+    <Compile Include="Samples\HasGeneric.cs" />
+    <Compile Include="Samples\HasDouble.cs" />
+    <Compile Include="Samples\HasNullableDouble.cs" />
     <Compile Include="Int64SerializationTests.cs" />
     <Compile Include="Int32SerializatrionTests.cs" />
     <Compile Include="ObjectIdSerializationTests.cs" />
+    <Compile Include="Reading\DoubleDeserializationTests.cs" />
     <Compile Include="Reading\ObjectSerializationTests.cs" />
     <Compile Include="ScratchPad.cs" />
     <Compile Include="SerializationTests.cs" />
@@ -68,6 +73,7 @@
       <Name>Bsooner</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

@@ -2,6 +2,7 @@ namespace Bsooner
 {
     public enum BsonType : byte
     {
+        None = 0,
         Double = 0x01,
         String = 0x02,
         Document = 0x03,

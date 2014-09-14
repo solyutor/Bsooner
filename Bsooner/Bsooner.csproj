@@ -52,6 +52,7 @@
     <Compile Include="ObjectId.cs" />
     <Compile Include="ObjectIdAttribute.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Reading\BsonToken.cs" />
     <Compile Include="Reading\FastBsonReader.cs" />
     <Compile Include="TypeExtenstions.cs" />
     <Compile Include="WriteMethod.cs" />

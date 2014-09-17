@@ -1,5 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics.Eventing.Reader;
 using System.IO;
+using System.Text;
 
 namespace Bsooner.Reading
 {
@@ -21,7 +24,7 @@ namespace Bsooner.Reading
             _bsonType = BsonType.None;
             _propertyName = null;
             _stringBytes = new List<byte>(128);
-            _buffer = new byte[8];
+            _buffer = new byte[128];
         }
 
         public BsonToken Token
@@ -86,7 +89,7 @@ namespace Bsooner.Reading
         private bool ReadBsonType()
         {
             byte current;
-            while ((current = (byte) _stream.ReadByte()) > 0)
+            while ((current = (byte)_stream.ReadByte()) > 0)
             {
                 _stringBytes.Add(current);
             }
@@ -103,7 +106,7 @@ namespace Bsooner.Reading
             var second = _stream.ReadByte();
             var third = _stream.ReadByte();
             var forth = _stream.ReadByte();
-            var result = forth << 24 | third << 16 | second << 8 | first ;
+            var result = forth << 24 | third << 16 | second << 8 | first;
             return result;
         }
 
@@ -112,21 +115,51 @@ namespace Bsooner.Reading
             _stream.Read(_buffer, 0, 8);
             fixed (byte* bufferPointer = _buffer)
             {
-                return *(double*) bufferPointer;
+                return *(double*)bufferPointer;
             }
-/*
- Alternative way. Check performance later
-            var buffer = stackalloc byte[8];
-            buffer[0] = _buffer[0];
-            buffer[1] = _buffer[1];
-            buffer[2] = _buffer[2];
-            buffer[3] = _buffer[3];
-            buffer[4] = _buffer[4];
-            buffer[5] = _buffer[5];
-            buffer[6] = _buffer[6];
-            buffer[7] = _buffer[7];
-            return *(double*) buffer;
-  */
+            /*
+             Alternative way. Check performance later
+                        var buffer = stackalloc byte[8];
+                        buffer[0] = _buffer[0];
+                        buffer[1] = _buffer[1];
+                        buffer[2] = _buffer[2];
+                        buffer[3] = _buffer[3];
+                        buffer[4] = _buffer[4];
+                        buffer[5] = _buffer[5];
+                        buffer[6] = _buffer[6];
+                        buffer[7] = _buffer[7];
+                        return *(double*) buffer;
+              */
+        }
+
+        public string ReadString()
+        {
+            var bytesProcessed = 0;
+            var stringLength = ReadInt()-1;
+
+            var decoder = BsonDefaults.Encoding.GetDecoder();
+
+            const int bufferSize = 128;
+            var byteBuffer = new byte[bufferSize];
+
+            var charBuffer = new char[bufferSize];
+
+            var stringBuilder = new StringBuilder();
+            do
+            {
+                var bytesLeft = stringLength - bytesProcessed;
+                var bytesToRead = bytesLeft > bufferSize ? bufferSize : bytesLeft;
+
+                var bytesRead = _stream.Read(byteBuffer, 0, bytesToRead);
+
+                var chars = decoder.GetChars(byteBuffer, 0, bytesRead, charBuffer, 0);
+
+                stringBuilder.Append(charBuffer, 0, chars);
+                bytesProcessed += bytesRead;
+            }
+            while (bytesProcessed < stringLength);
+            return stringBuilder.ToString();
+
         }
     }
 }

@@ -10,6 +10,7 @@ namespace Bsooner
         public static readonly UTF8Encoding Encoding;
 
         public static readonly Encoder Encoder;
+        
 
         /// <summary>
         /// Max chars it UTF-6 Encoding per code point

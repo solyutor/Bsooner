@@ -42,6 +42,7 @@
     <Compile Include="DocumentSerializationTests.cs" />
     <Compile Include="DoubleSerializationTests.cs" />
     <Compile Include="Reading\IntDeserializationTests.cs" />
+    <Compile Include="Reading\StringDeserializationTests.cs" />
     <Compile Include="Samples\HasGeneric.cs" />
     <Compile Include="Samples\HasDouble.cs" />
     <Compile Include="Samples\HasNullableDouble.cs" />
